@@ -26,6 +26,7 @@ class GPSData(models.Model):
     fs_dup = models.BooleanField(default=False)
     p_geom = geo_models.GeometryField()
     lombardy = models.IntegerField(blank=True, null=True)
+    local_id = models.CharField(max_length=40, blank=True, null=True)
 
     class Meta:
         ordering = ['date_taken']
@@ -47,16 +48,18 @@ class GPSData(models.Model):
                 row.fs_data.delete()
                 row.delete()
                 c += 1
-        print 'deleted: ' +str(c)
+                print "deleted %s" % c
+        print 'deleted FSQ: ' +str(c)
 
         c=0
         for row in cls.objects.filter(platform='FLC'):
             #Same location, day/hour and user > 1?  Delete!
             if cls.objects.filter(latitude=row.latitude, longitude=row.longitude, user=row.user,
-                                  date_taken=row.date_taken, date_posted=row.date_posted).count() > 1:
+                                  date_taken=row.date_taken, date_posted=row.date_posted,
+                                  local_id=row.local_id).count() > 1:
                 row.delete()
                 c += 1
-        print 'deleted: ' +str(c)
+        print 'deleted FLC: ' +str(c)
 
 
     @property
