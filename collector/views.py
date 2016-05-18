@@ -186,7 +186,7 @@ def twitter(request, bbox='6.63,36.46,18.78,47.09'):
 #Handles twitter oauth and send requests
 def oauth_req(url, http_method="GET", post_body="", http_headers=None):
     consumer = oauth.Consumer(key=settings.TWITTER_API_KEY, secret=settings.TWITTER_CONSUMER_SECRET)
-    token = oauth.Token(key='273627737-DFNPuF4ISx9c13chJmQfrRraDYfUASTFFn0uWXTx', secret='xT1LITvyVXCS6BiJ2ltXmI5FSFmIG7Qhho6wf6K6u6E36')
+    token = oauth.Token(key=settings.TWITTER_TOKEN_KEY, secret=settings.TWITTER_TOKEN_SECRET)
     client = oauth.Client(consumer, token)
     params = {
     'oauth_version': "1.0",
