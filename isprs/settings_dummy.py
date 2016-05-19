@@ -78,9 +78,9 @@ WSGI_APPLICATION = 'isprs.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': 'isprs',
-        'USER': 'twitt',
-        'PASSWORD': 'twi113r',
+        'NAME': 'yourdbname',
+        'USER': 'yourdbuser',
+        'PASSWORD': 'yourdbpass',
         'HOST': '127.0.0.1',
         'PORT': '5432',
     }
