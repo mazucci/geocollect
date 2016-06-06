@@ -158,6 +158,7 @@ def foursquare_circle(request):
 def twitter(request, bbox='6.63,36.46,18.78,47.09'):
     #url for streaming API limited to the bounding box for Italy
     url = "https://stream.twitter.com/1.1/statuses/filter.json?locations=%s" % (bbox)
+    print url
     stream = oauth_req(url)
     #Reads the twitter live response
     for  line in stream:
