@@ -113,6 +113,8 @@ class TwitterData(models.Model):
     source = models.CharField(max_length=250, null=True, blank=True)
     user = models.CharField(max_length=300, null=True)
     user_location = models.CharField(max_length=300, null=True, blank=True)
+    text = models.CharField(max_length=200, null=True)
+    hashtags = models.CharField(max_length=200, null=True)
 
     def __unicode__(self):
         return "User: " + self.user + "  LatLon: " + str(self.latitude) + ", " + str(self.longitude)

@@ -159,29 +159,67 @@ def twitter(request, bbox='6.63,36.46,18.78,47.09'):
     #url for streaming API limited to the bounding box for Italy
     url = "https://stream.twitter.com/1.1/statuses/filter.json?locations=%s" % (bbox)
     print url
-    stream = oauth_req(url)
+    
     #Reads the twitter live response
-    for  line in stream:
-        if line.endswith('\r\n'):
+
+    backoff_network_error = 0.25
+    backoff_http_error = 5
+    backoff_rate_limit = 60
+    while True:
+        try:
+            stream = oauth_req(url)
+            for line in stream:
+                handle_tweets(line) #Saves tweet
+        except:
+            # Network error, use linear back off up to 16 seconds
+            print 'Network error: %s' % stream
+            print 'Waiting %s seconds before trying again' % backoff_network_error
+            time.sleep(backoff_network_error)
+            backoff_network_error = min(backoff_network_error + 1, 16)
+            continue
+        # HTTP Error
+        sc = stream.getcode()
+        if sc == 420:
+            # Rate limit, use exponential back off starting with 1 minute and double each attempt
+            print 'Rate limit, waiting %s seconds' % backoff_rate_limit
+            time.sleep(backoff_rate_limit)
+            backoff_rate_limit *= 2
+        else:
+            # HTTP error, use exponential back off up to 320 seconds
+            print 'HTTP error %s, %s' % (sc, stream.getcode())
+            print 'Waiting %s seconds' % backoff_http_error
+            time.sleep(backoff_http_error)
+            backoff_http_error = min(backoff_http_error * 2, 320)
+
+        
+
+        
+    return HttpResponse('Finished!\nlast response: </br>'+"<a href='"+str(stream)+"' >"+str(stream)+"</a>")
+
+def handle_tweets(line):
+    if line.endswith('\r\n'):
             try:
                  tweet = json.loads(line)
                  #Only saves the gereferenced tweets
                  if tweet.get('coordinates'):
                     tweet_db = TwitterData( latitude=tweet['coordinates']['coordinates'][1], longitude=tweet['coordinates']['coordinates'][0],
-                                            user=tweet['user']['screen_name'], date=datetime.datetime.strptime(str(tweet['created_at']), "%a %b %d %H:%M:%S +%f %Y"))
+                                            user=tweet['user']['screen_name'], date=datetime.datetime.strptime(str(tweet['created_at']), "%a %b %d %H:%M:%S +%f %Y"),
+                                            text=tweet['text'])
                     if tweet.get('source'):
                         tweet_db.source = tweet['source']
                     if tweet['user'].get('location'):
                         tweet_db.user_location = tweet['user']['location']
+                    if tweet.get('entities'):
+                        hashtags = ''
+                        for ht in tweet['entities']['hashtags']:
+                            hashtags += ht['text'] + ","
+                        tweet_db.hashtags = hashtags
                     tweet_db.save()
-                    print 'hay coordenadas! ' + str(tweet['coordinates'])
+                    print 'Coordinates! ' + str(tweet['coordinates']['coordinates'])
                  #else:
                   #  print tweet
             except:
-                print line
-
-        
-    return HttpResponse('Finished!\nlast response: </br>'+"<a href='"+str(stream)+"' >"+str(stream)+"</a>")
+                print "::Not saved!: %s" % line
 
 
 #Handles twitter oauth and send requests
