@@ -17,7 +17,7 @@ class GPSData(models.Model):
 
     latitude = models.DecimalField(max_digits=11, decimal_places=7)
     longitude = models.DecimalField(max_digits=11, decimal_places=7)
-    date_taken = models.DateTimeField(null=True, blank=True)
+    date_taken = models.DateTimeField(null=True, blank=True, db_index=True)
     date_posted = models.DateTimeField(null=True, blank=True)
     user = models.CharField(max_length=200, null=True, blank=True)
     platform = models.CharField(max_length=10, choices=PLATFORM_CHOICES, default=FLICKR)
@@ -29,7 +29,7 @@ class GPSData(models.Model):
     local_id = models.CharField(max_length=40, blank=True, null=True)
 
     class Meta:
-        ordering = ['date_taken']
+        ordering = ['-date_taken']
         verbose_name = 'GPS Data'
         verbose_name_plural = "GPS Data"
 
@@ -109,15 +109,27 @@ class FSCircle(models.Model):
 class TwitterData(models.Model):
     latitude = models.DecimalField(max_digits=11, decimal_places=7)
     longitude = models.DecimalField(max_digits=11, decimal_places=7)
-    date = models.DateTimeField(null=True, blank=True)
+    date = models.DateTimeField(null=True, blank=True, db_index=True)
     source = models.CharField(max_length=250, null=True, blank=True)
     user = models.CharField(max_length=300, null=True)
     user_location = models.CharField(max_length=300, null=True, blank=True)
     text = models.CharField(max_length=200, null=True)
     hashtags = models.CharField(max_length=200, null=True)
+    country = models.CharField(max_length=20, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-date']
 
     def __unicode__(self):
         return "User: " + self.user + "  LatLon: " + str(self.latitude) + ", " + str(self.longitude)
+
+    @classmethod
+    def del_dups(cls):
+        _all = TwitterData.objects.exclude(text__isnull=True, text__exact="")
+        for row in _all:
+            if cls.objects.filter(user=row.user, latitude=row.latitude, longitude=row.longitude,
+                                  date=row.date, text=row.text).count() > 1:
+                row.delete()
 
 class Lombardia(models.Model):
     gid = models.AutoField(primary_key=True)

@@ -1,0 +1,48 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dynamic Data Viz Heatmap</title>
+  <link rel="stylesheet" href="{% static "libraries/jquery-ui-1.12.0/jquery-ui.min.css" %}">
+  <script src="{% static "libraries/jquery-1.12.3.min.js" %}"></script>
+  <script src="{% static "libraries/jquery-ui-1.12.0/jquery-ui.min.js" %}"></script>
+  <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
+  <script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+  <script src="{% static "libraries/heatmap.js/build/heatmap.js" %}"></script>
+  <script src="{% static "libraries/heatmap.js/plugins/leaflet-heatmap.js" %}"></script>
+  <script src="{% static "fsq_categories.js" %}"></script>
+</head>
+<body>
+  <div style="text-align: center;">
+    <h2>From Twitter &amp; Foursquare Data to Heatmap Visualization</h2>
+    <small>By: <a href="https://github.com/danioxoli">@danioxoli</a>, 
+    <a href="https://bitbucket.org/kilsedar">@kilsedar</a>, 
+    <a href="https://github.com/mazucci">@mazucci</a>, 
+    </small> <br><br>
+  </div>
+
+  <div id="map">
+    <div id="legend">
+      <div id="basemaps">
+        <input id="baseDark" type="radio" name="base" checked/><label for="baseDark">CartoDB Dark</label><br>
+        <input id="baseLight" type="radio" name="base"/><label for="baseLight">CartoDB Light</label><br>
+      </div>
+      <input id="twt" type="checkbox" checked onclick="chktwt()"/><label for="twt">Twitter</label><img src="{% static "images/heatmap_1_2_s.png" %}"><br>
+      <input id="fsq" type="checkbox" checked onclick="chkfsq()"/><label for="fsq">Foursquare</label><img src="{% static "images/heatmap_2_2_s.png" %}">
+    </div>
+
+    <div id="filter_settings">
+      <label id="date">Select the start date: <input id="datepicker_s" type="text" autocomplete="off"></input></label>
+      <label id="date">Select the end date: <input id="datepicker_e" type="text" autocomplete="off"></input></label>
+      <label id="label_twt">Twitter tag: <input id="input_twt" type="text"></input></label>
+      <label id="label_fsq">Foursquare keyword: <select id="select_fsq" type="text"><option value=""></option></select></label>
+      <input id="date_filter" class="date_last" type="submit" value="Filter">
+    </div>
+  </div>
+
+  <link rel="stylesheet" href="{% static "index.css" %}">
+  <script src="{% static "index.js" %}"></script>
+</body>
+</html>

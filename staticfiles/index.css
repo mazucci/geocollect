@@ -1,0 +1,66 @@
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow-x: hidden;
+  font-family: sans-serif;
+}
+#map {
+  height: 90%;
+}
+#legend {
+  position: absolute;
+  background: rgba(255, 204, 204, 0.5);
+  padding: 10px;
+  top: 10px;
+  right: 10px;
+  width: 160px;
+  border-radius: 4px;
+  border: 3px solid rgba(255,255,255,.5);
+  z-index: 10;
+  cursor:default;
+}
+#legend input {
+  cursor: pointer;
+}
+#legend label {
+  cursor: pointer;
+  font-weight: bold;
+}
+#date {
+  margin: 0px;
+  display: block;
+}
+#date_filter {
+  margin-top: 10px;
+}
+input[type=checkbox] {
+  vertical-align: middle;
+  position: relative;
+  bottom: 1px;
+}
+#filter_settings {
+  position: absolute;
+  background: rgba(255, 204, 204, 0.5);
+  padding: 10px;
+  top: 10px;
+  left: 50px;
+  width: auto;
+  border-radius: 4px;
+  border: 3px solid rgba(255,255,255,.5);
+  z-index: 10;
+  cursor:default;
+  font-weight: bold;
+}
+#datepicker_s, #datepicker_e, #input_twt {
+  width: 262px;
+}
+select, #date_filter {
+  cursor: pointer;
+}
+#basemaps {
+  margin-bottom: 10px;
+}
+#label_twt, #label_fsq, #datepicker_s, #datepicker_e, #input_twt, #select_fsq {
+  display: block;
+}

@@ -62,45 +62,6 @@ def flickr(request, bbox='8.4931,44.9026,11.4316,46.6381', min_date=1451779200, 
     return HttpResponse('Finished! saved '+str(count))
 
 
-def panoramio(request):
-    start = 0
-    phcount = start
-    url = "http://www.panoramio.com/map/get_panoramas.php?set=full&from=%s&to=%s" % (start, start+100)
-    url += "&minx=%s&miny=%s&maxx=%s&maxy=%s&size=medium&mapfilter=no" % (8.4931,44.9026,11.4316,46.6381) #bounding box
-    r = requests.get(url)
-    #Response ok?
-    if r.status_code == 200:
-
-        js = json.loads(r.content)
-        for photo in js['photos']:
-            data = GPSData( latitude=round(photo['latitude'],6), longitude=round(photo['longitude'],6), 
-                            date_posted=datetime.datetime.strptime(photo['upload_date'], "%d %B %Y"),
-                            platform=GPSData.PANORAMIO,
-                            user=photo['owner_name'])
-            data.save()
-            phcount+=1
-        #Iter over pages
-        while js['has_more'] is True:
-            #Last photo index saved + 1
-            start = phcount + 1
-            #ask for 100 photos more
-            url = "http://www.panoramio.com/map/get_panoramas.php?set=full&from=%s&to=%s" % (start, start+100)
-            url += "&minx=%s&miny=%s&maxx=%s&maxy=%s&size=medium&mapfilter=no" % (6.8640, 44.0994, 12.6807, 46.1532)
-            r = requests.get(url)
-            
-            if r is not None:
-                js = json.loads(r.content)
-                for photo in js['photos']:
-                    data = GPSData( latitude=round(photo['latitude'],6), longitude=round(photo['longitude'],6), 
-                                    date_posted=datetime.datetime.strptime(photo['upload_date'], "%d %B %Y"),
-                                    platform=GPSData.PANORAMIO,
-                                    user=photo['owner_name'])
-                    data.save()
-                    phcount+=1
-                    
-    return HttpResponse('Finished! saved '+str(phcount))
-
-
 def foursquare_circle(request):
     #Asks for areas of (14142*pi)^2 over the venues API of foursquare to cover fo the Lombardy region in Italy
     circles = FSCircle.objects.filter(radius=14142)
@@ -156,8 +117,13 @@ def foursquare_circle(request):
     return HttpResponse('Finished!\nlast response: </br>'+r.content)
 
 def twitter(request, bbox='6.63,36.46,18.78,47.09'):
-    #url for streaming API limited to the bounding box for Italy
+    #url for streaming API limited to the bounding box for Italy/bbox can also be a URL param
+    country = "ITA"
     url = "https://stream.twitter.com/1.1/statuses/filter.json?locations=%s" % (bbox)
+    if bbox.split(',')[0] == '38.941': #if bbox is tanzania add also flood words in swahili
+        "&track=%s" % 'mafuriko,gharika'
+        country = "TZN"
+
     print url
     
     #Reads the twitter live response
@@ -169,10 +135,10 @@ def twitter(request, bbox='6.63,36.46,18.78,47.09'):
         try:
             stream = oauth_req(url)
             for line in stream:
-                handle_tweets(line) #Saves tweet
+                handle_tweets(line, country) #Saves tweet
         except:
             # Network error, use linear back off up to 16 seconds
-            print 'Network error: %s' % stream
+            #print 'Network error: %s' % stream or "no stream!"
             print 'Waiting %s seconds before trying again' % backoff_network_error
             time.sleep(backoff_network_error)
             backoff_network_error = min(backoff_network_error + 1, 16)
@@ -196,7 +162,7 @@ def twitter(request, bbox='6.63,36.46,18.78,47.09'):
         
     return HttpResponse('Finished!\nlast response: </br>'+"<a href='"+str(stream)+"' >"+str(stream)+"</a>")
 
-def handle_tweets(line):
+def handle_tweets(line, country):
     if line.endswith('\r\n'):
             try:
                  tweet = json.loads(line)
@@ -204,7 +170,7 @@ def handle_tweets(line):
                  if tweet.get('coordinates'):
                     tweet_db = TwitterData( latitude=tweet['coordinates']['coordinates'][1], longitude=tweet['coordinates']['coordinates'][0],
                                             user=tweet['user']['screen_name'], date=datetime.datetime.strptime(str(tweet['created_at']), "%a %b %d %H:%M:%S +%f %Y"),
-                                            text=tweet['text'])
+                                            text=tweet['text'], country=country)
                     if tweet.get('source'):
                         tweet_db.source = tweet['source']
                     if tweet['user'].get('location'):
@@ -243,10 +209,11 @@ def oauth_req(url, http_method="GET", post_body="", http_headers=None):
     return rs
  
   
-def json_OL_heatmap(request, days=2, platform='FSQ'):
+def json_OL_heatmap(request, days=2, platform='FSQ', date_start=None, date_end=None, keyword=None):
     """Feeds an OpenLayers client to display data as heatmap"""
     #Load the shapefile of polygons and convert it to shapely polygon objects
-    polygons_sf = shapefile.Reader("shapefile/griglia_0_02.shp")
+    polygons_sf = shapefile.Reader("static/shapefile/griglia_0_02.shp")
+    #polygons_sf = shapefile.Reader("shapefile/test.shp")
     polygon_shapes = polygons_sf.shapes()
     polygon_points = [q.points for q in polygon_shapes ]
     polygons = [Polygon(q) for q in polygon_points]
@@ -275,19 +242,37 @@ def json_OL_heatmap(request, days=2, platform='FSQ'):
         lon_centres.append(x_cent)
         lat_centres.append(y_cent)
 
-    #Get the points HERE!!!
-    #print cache.get(platform)
-    if cache.get(platform) is not None:
-        print "using cache!", platform
-        data = cache.get(platform)
-    else:
-        print "setting cache", platform
-        if platform == 'TWT':
-            data = TwitterData.objects.filter(date__range=(datetime.date.today()-datetime.timedelta(days=days), datetime.date.today()))
+    if date_start is None and date_end is None:
+        #Get the points HERE!!!
+        #print cache.get(platform)
+        if cache.get(platform) is not None:
+            print "using cache!", platform
+            data = cache.get(platform)
         else:
-            data = GPSData.objects.filter(platform=platform, date_taken__range=(datetime.date.today()-datetime.timedelta(days=days), datetime.date.today()))
-        cache.set(platform, data, 172800)
-        
+            print "setting cache", platform
+            if platform == 'TWT':
+                data = TwitterData.objects.filter(date__range=(datetime.date.today()-datetime.timedelta(days=days), datetime.date.today()))
+                if keyword != None:
+                    data = data.filter(text__contains=keyword)
+            else:
+                data = GPSData.objects.filter(platform=platform, date_taken__range=(datetime.date.today()-datetime.timedelta(days=days), datetime.date.today()))
+            cache.set(platform, data, 172800)
+    else:
+        date_start = date_start+"_00:00:00"
+        date_end = date_end+"_00:00:00"
+        if cache.get(platform+str(date_start)+"_"+str(date_end)) is not None and keyword is None:
+            data = cache.get(platform+str(date_start)+"_"+str(date_end))
+        else:
+            if platform == 'TWT':
+                data = TwitterData.objects.filter(date__range=(datetime.datetime.strptime(date_start, '%d-%m-%Y_%H:%M:%S'), datetime.datetime.strptime(date_end, '%d-%m-%Y_%H:%M:%S')))
+                if keyword is not None:
+                    data = data.filter(text__contains=keyword)
+            else:
+                data = GPSData.objects.filter(platform=platform, date_taken__range=(datetime.datetime.strptime(date_start, '%d-%m-%Y_%H:%M:%S'), datetime.datetime.strptime(date_end, '%d-%m-%Y_%H:%M:%S')))
+                if platform == 'FSQ' and keyword is not None:
+                    data = data.filter(fs_data__category = keyword)
+            if keyword is None:
+                cache.set(platform+str(date_start)+"_"+str(date_end), data, 172800)
     
     point_coords = [[obj.longitude, obj.latitude] for obj in data]
     points = [Point_S(q) for q in point_coords]
@@ -326,3 +311,6 @@ def json_OL_heatmap(request, days=2, platform='FSQ'):
     jfile['data'] = ps
 
     return JsonResponse(jfile)
+
+def heatmap(request):
+    return render(request, 'index.html')
