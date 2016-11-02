@@ -38,6 +38,7 @@ class GPSData(models.Model):
 
     @classmethod
     def del_dups(cls):
+        """Deletes duplicates resulting from overlaping queries"""
         c = 0
         for row in cls.objects.filter(platform='FSQ', fs_dup=False):
             #Same location, day/hour and venue > 1?  Delete!
@@ -68,6 +69,7 @@ class GPSData(models.Model):
 
     @classmethod
     def gen_fs_dups(cls):
+        """Creates single registers for each here_now from FSQ"""
         added = 0
         #Delete previously created dups
         cls.objects.filter(platform='FSQ', fs_dup=True).delete()

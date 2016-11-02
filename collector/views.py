@@ -209,7 +209,7 @@ def oauth_req(url, http_method="GET", post_body="", http_headers=None):
     return rs
  
   
-def json_OL_heatmap(request, days=2, platform='FSQ', date_start=None, date_end=None, keyword=None):
+def json_OL_heatmap(request, days=2, platform='FSQ', date_start=None, date_end=None, keyword=''):
     """Feeds an OpenLayers client to display data as heatmap"""
     #Load the shapefile of polygons and convert it to shapely polygon objects
     polygons_sf = shapefile.Reader("static/shapefile/griglia_0_02.shp")
