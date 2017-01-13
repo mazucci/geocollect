@@ -109,8 +109,8 @@ class FSCircle(models.Model):
         return "Radius: " + self.radius
 
 class TwitterData(models.Model):
-    latitude = models.DecimalField(max_digits=11, decimal_places=7)
-    longitude = models.DecimalField(max_digits=11, decimal_places=7)
+    latitude = models.DecimalField(max_digits=11, decimal_places=7, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=11, decimal_places=7, null=True, blank=True)
     date = models.DateTimeField(null=True, blank=True, db_index=True)
     source = models.CharField(max_length=250, null=True, blank=True)
     user = models.CharField(max_length=300, null=True)
@@ -118,6 +118,7 @@ class TwitterData(models.Model):
     text = models.CharField(max_length=200, null=True)
     hashtags = models.CharField(max_length=200, null=True)
     country = models.CharField(max_length=20, null=True, blank=True)
+    place = models.CharField(max_length=10, null=True, blank=True)
 
     class Meta:
         ordering = ['-date']

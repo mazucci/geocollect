@@ -6,16 +6,16 @@ import time
 import urlparse
 import urllib2
 import requests
-import flickrapi
+#import flickrapi
 import oauth2 as oauth
 from math import ceil
 
-import shapefile
-import shapely
-import numpy as np
-from shapely.geometry import Polygon, Point as Point_S
+#import shapefile
+#import shapely
+#import numpy as np
+#from shapely.geometry import Polygon, Point as Point_S
 from collections import Counter
-from rtree import index
+#from rtree import index
 
 from django.core.cache import cache
 from django.shortcuts import render, redirect
@@ -26,40 +26,40 @@ from models import GPSData, FoursquareData, FSCircle, TwitterData, Lombardia
 
 
 #Views to connect to APIs and create GPSData objects
-def flickr(request, bbox='8.4931,44.9026,11.4316,46.6381', min_date=1451779200, max_date=1454198400):
-    #FlickrAPI config connection
-    flickr = flickrapi.FlickrAPI(settings.FLICKR_API_KEY, settings.FLICKR_API_SECRET, format='json')
-    #Handle redirect
-    redirect(flickr.auth_via_url(perms='read'))
-    response = flickr.photos.search(bbox=bbox, min_taken_date=min_date, max_taken_date=max_date, page=1)
-    js = json.loads(response)
-    count = 0
-    #Iter over pages
-    tot_pag=int(js['photos']['pages']+1)
-    for p in range(1, tot_pag):
-        #Request per page
-        response = flickr.photos.search(bbox=bbox, min_taken_date=min_date, max_taken_date=max_date, page=p)
-        js = json.loads(response)
-        #Test if obj photos in response
-        if js['photos'].get('photo'):
-            for photo in js['photos']['photo']:
-                geo = json.loads(flickr.photos.geo.getLocation(photo_id=photo['id']))
-                info = json.loads(flickr.photos.getInfo(photo_id=photo['id']))
-                taken = info['photo']['dates']['taken']
-                posted = datetime.datetime.fromtimestamp(int(info['photo']['dates']['posted'])).strftime('%Y-%m-%d %H:%M:%S')
-                #Create and save obj locall
-                print photo['id']
-                data = GPSData( latitude=float(geo['photo']['location']['latitude']), 
-                                longitude=float(geo['photo']['location']['longitude']),
-                                date_taken=taken,
-                                date_posted=posted, user=info['photo']['owner']['username'],
-                                local_id=photo['id'])
-                data.save()
+# def flickr(request, bbox='8.4931,44.9026,11.4316,46.6381', min_date=1451779200, max_date=1454198400):
+#     #FlickrAPI config connection
+#     flickr = flickrapi.FlickrAPI(settings.FLICKR_API_KEY, settings.FLICKR_API_SECRET, format='json')
+#     #Handle redirect
+#     redirect(flickr.auth_via_url(perms='read'))
+#     response = flickr.photos.search(bbox=bbox, min_taken_date=min_date, max_taken_date=max_date, page=1)
+#     js = json.loads(response)
+#     count = 0
+#     #Iter over pages
+#     tot_pag=int(js['photos']['pages']+1)
+#     for p in range(1, tot_pag):
+#         #Request per page
+#         response = flickr.photos.search(bbox=bbox, min_taken_date=min_date, max_taken_date=max_date, page=p)
+#         js = json.loads(response)
+#         #Test if obj photos in response
+#         if js['photos'].get('photo'):
+#             for photo in js['photos']['photo']:
+#                 geo = json.loads(flickr.photos.geo.getLocation(photo_id=photo['id']))
+#                 info = json.loads(flickr.photos.getInfo(photo_id=photo['id']))
+#                 taken = info['photo']['dates']['taken']
+#                 posted = datetime.datetime.fromtimestamp(int(info['photo']['dates']['posted'])).strftime('%Y-%m-%d %H:%M:%S')
+#                 #Create and save obj locall
+#                 print photo['id']
+#                 data = GPSData( latitude=float(geo['photo']['location']['latitude']), 
+#                                 longitude=float(geo['photo']['location']['longitude']),
+#                                 date_taken=taken,
+#                                 date_posted=posted, user=info['photo']['owner']['username'],
+#                                 local_id=photo['id'])
+#                 data.save()
 
-                #Count saved
-                count += 1
+#                 #Count saved
+#                 count += 1
         
-    return HttpResponse('Finished! saved '+str(count))
+#     return HttpResponse('Finished! saved '+str(count))
 
 
 def foursquare_circle(request):
@@ -116,12 +116,13 @@ def foursquare_circle(request):
 
     return HttpResponse('Finished!\nlast response: </br>'+r.content)
 
-def twitter(request, bbox='6.63,36.46,18.78,47.09'):
+def twitter(request, bbox='-75.033188,10.837352,-74.755562,11.10769'):
     #url for streaming API limited to the bounding box for Italy/bbox can also be a URL param
-    country = "ITA"
+    country = "COL"
     url = "https://stream.twitter.com/1.1/statuses/filter.json?locations=%s" % (bbox)
+    url += "&track=%s" % 'atlanticolider,ggjcol,ggjcol2017,globalgamejam'
     if bbox.split(',')[0] == '38.941': #if bbox is tanzania add also flood words in swahili
-        "&track=%s" % 'mafuriko,gharika'
+        url += "&track=%s" % 'mafuriko,gharika'
         country = "TZN"
 
     print url
@@ -165,26 +166,30 @@ def twitter(request, bbox='6.63,36.46,18.78,47.09'):
 def handle_tweets(line, country):
     if line.endswith('\r\n'):
             try:
-                 tweet = json.loads(line)
+                tweet = json.loads(line)
                  #Only saves the gereferenced tweets
-                 if tweet.get('coordinates'):
+                if tweet.get('coordinates'):
                     tweet_db = TwitterData( latitude=tweet['coordinates']['coordinates'][1], longitude=tweet['coordinates']['coordinates'][0],
                                             user=tweet['user']['screen_name'], date=datetime.datetime.strptime(str(tweet['created_at']), "%a %b %d %H:%M:%S +%f %Y"),
                                             text=tweet['text'], country=country)
-                    if tweet.get('source'):
-                        tweet_db.source = tweet['source']
-                    if tweet['user'].get('location'):
-                        tweet_db.user_location = tweet['user']['location']
-                    if tweet.get('entities'):
-                        hashtags = ''
-                        for ht in tweet['entities']['hashtags']:
-                            hashtags += ht['text'] + ","
-                        tweet_db.hashtags = hashtags
-                    tweet_db.save()
                     print 'Coordinates! ' + str(tweet['coordinates']['coordinates'])
-                 #else:
-                  #  print tweet
-            except:
+                else:
+                    tweet_db = TwitterData( user=tweet['user']['screen_name'], date=datetime.datetime.strptime(str(tweet['created_at']), "%a %b %d %H:%M:%S +%f %Y"),
+                                            text=tweet['text'], country=country)
+                if tweet.get('source'):
+                    tweet_db.source = tweet['source']
+                if tweet['user'].get('location'):
+                    tweet_db.user_location = tweet['user']['location']
+                if tweet.get('entities'):
+                    hashtags = ''
+                    for ht in tweet['entities']['hashtags']:
+                        hashtags += ht['text'] + ","
+                    tweet_db.hashtags = hashtags
+                tweet_db.save()
+                
+
+            except Exception as e:
+                print str(e)
                 print "::Not saved!: %s" % line
 
 
